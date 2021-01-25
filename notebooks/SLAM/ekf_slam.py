@@ -12,7 +12,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 # EKF state covariance: 3x3 size
-Cx = np.diag([0.5, 0.5, np.deg2rad(30.0)]) ** 2
+Q = np.diag([0.5, 0.5, np.deg2rad(30.0)]) ** 2
+R = np.diag([0.5, 0.5])**2
 
 #  Simulation parameter
 Q_sim = np.diag([0.2, np.deg2rad(1.0)]) ** 2
@@ -38,7 +39,7 @@ def ekf_slam(xEst, PEst, u, z):
     # 返回机器人位姿的在含噪控制下的预测：
     xEst[0:S] = motion_model(xEst[0:S], u)
     # 更新机器人位姿的P
-    PEst[0:S, 0:S] = G.T @ PEst[0:S, 0:S] @ G + Fx.T @ Cx @ Fx
+    PEst[0:S, 0:S] = G.T @ PEst[0:S, 0:S] @ G + Fx.T @ Q @ Fx
     # 给Landmark准备的variance
     initP = np.eye(2) 
 
@@ -209,7 +210,7 @@ def calc_innovation(lm, xEst, PEst, z, LMid):
     y[1] = pi_2_pi(y[1])
     # 放入delta的平方（标量）,delta(2x1),状态向量和lm在状态向量中的序号+1
     H = jacob_h(q, delta, xEst, LMid + 1)
-    S = H @ PEst @ H.T + Cx[0:2, 0:2]
+    S = H @ PEst @ H.T + R
 
     return y, S, H
 

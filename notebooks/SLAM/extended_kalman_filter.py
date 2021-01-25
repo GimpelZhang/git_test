@@ -4,6 +4,7 @@ Extended kalman filter (EKF) localization sample
 
 author: Atsushi Sakai (@Atsushi_twi)
 
+https://github.com/AtsushiSakai/PythonRobotics/blob/master/Localization/extended_kalman_filter/
 """
 
 import math
@@ -11,13 +12,15 @@ import math
 import matplotlib.pyplot as plt
 import numpy as np
 
-# Covariance for EKF simulation
+# Covariance for EKF:
+# 运动模型协方差：
 Q = np.diag([
     0.1,  # variance of location on x-axis
     0.1,  # variance of location on y-axis
     np.deg2rad(10),  # variance of yaw angle
     10.0  # variance of velocity
 ]) ** 2  # predict state covariance
+# 观测模型协方差：
 R = np.diag([1.0, 1.0]) ** 2  # Observation x,y position covariance
 
 #  Simulation parameter
@@ -38,6 +41,10 @@ def calc_input():
 
 
 def observation(xTrue, xd, u):
+    """
+    执行仿真过程，不是EKF的一部分
+    """
+    # 轨迹真值
     xTrue = motion_model(xTrue, u)
 
     # add noise to gps x-y
@@ -46,17 +53,21 @@ def observation(xTrue, xd, u):
     # add noise to input
     ud = u + INPUT_NOISE @ np.random.randn(2, 1)
 
+    # 航迹推测得出的轨迹：
     xd = motion_model(xd, ud)
 
     return xTrue, z, xd, ud
 
 
 def motion_model(x, u):
+    """
+    运动模型
+    """
     F = np.array([[1.0, 0, 0, 0],
                   [0, 1.0, 0, 0],
                   [0, 0, 1.0, 0],
                   [0, 0, 0, 0]])
-
+    # 注意：在这里B矩阵中耦合了状态向量x，因此并不是简单的线性模型：
     B = np.array([[DT * math.cos(x[2, 0]), 0],
                   [DT * math.sin(x[2, 0]), 0],
                   [0.0, DT],
@@ -162,9 +173,9 @@ def main():
     time = 0.0
 
     # State Vector [x y yaw v]'
-    xEst = np.zeros((4, 1))
+    xEst = np.zeros((4, 1)) # 初始值全部为0
     xTrue = np.zeros((4, 1))
-    PEst = np.eye(4)
+    PEst = np.eye(4) #用一个对角都是1的矩阵表示状态协方差矩阵初始值
 
     xDR = np.zeros((4, 1))  # Dead reckoning
 
