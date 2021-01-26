@@ -84,15 +84,16 @@ def observation(xTrue, xd, u, RFID):
     """
     xTrue = motion_model(xTrue, u)
 
-    # add noise to gps x-y
     z = np.zeros((0, 3))
 
     for i in range(len(RFID[:, 0])):
 
         dx = RFID[i, 0] - xTrue[0, 0]
         dy = RFID[i, 1] - xTrue[1, 0]
+        # 计算机器人位姿真值与路标点的距离d
         d = math.hypot(dx, dy)
         angle = pi_2_pi(math.atan2(dy, dx) - xTrue[2, 0])
+        # 如果距离d小于阈值，代表机器人可以看到这个路标点：
         if d <= MAX_RANGE:
             dn = d + np.random.randn() * Q_sim[0, 0] ** 0.5  # add noise
             angle_n = angle + np.random.randn() * Q_sim[1, 1] ** 0.5  # add noise
@@ -182,6 +183,7 @@ def search_correspond_landmark_id(xAug, PAug, zi):
         lm = get_landmark_position_from_state(xAug, i)
         # 放入第i个已有LM的坐标lm、机器人位姿预测过的状态向量xAug和variance PAug、待比较的新观测zi
         y, S, H = calc_innovation(lm, xAug, PAug, zi, i)
+        # 由残差y计算Mahalanobis distance：y.T @ np.linalg.inv(S) @ y
         min_dist.append(y.T @ np.linalg.inv(S) @ y)
 
     min_dist.append(M_DIST_TH)  # new landmark
@@ -241,6 +243,9 @@ def jacob_h(q, delta, x, i):
 
 
 def pi_2_pi(angle):
+    """
+    将角度范围限定在[-pi,pi]
+    """
     return (angle + math.pi) % (2 * math.pi) - math.pi
 
 
