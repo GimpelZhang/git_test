@@ -4,6 +4,8 @@ Unscented kalman filter (UKF) localization sample
 
 author: Atsushi Sakai (@Atsushi_twi)
 
+modification: Junchuan Zhang
+
 """
 
 import math
@@ -107,11 +109,9 @@ def generate_sigma_points(xEst, PEst, gamma):
     # Positive direction
     for i in range(n):
         sigma = np.hstack((sigma, xEst + gamma * Psqrt[:, i:i + 1]))
-    # print(sigma)
     # Negative direction
     for i in range(n):
         sigma = np.hstack((sigma, xEst - gamma * Psqrt[:, i:i + 1]))
-    # print(sigma)
     return sigma
 
 
@@ -141,7 +141,6 @@ def calc_sigma_covariance(x, sigma, wc, Pi):
     nSigma = sigma.shape[1]
     d = sigma - x[0:sigma.shape[0]]
     P = Pi
-    # print("########")
     for i in range(nSigma):
         P = P + wc[0, i] * d[:, i:i + 1] @ d[:, i:i + 1].T
         
@@ -167,27 +166,32 @@ def ukf_estimation(xEst, PEst, z, u, wm, wc, gamma):
     wm, wc, gamma: 无迹变换参数
     '''
     #  Predict 预测
-    # 生成sigma采样点：
+    # 生成sigma采样点： 2:
     sigma = generate_sigma_points(xEst, PEst, gamma)
-    # 运动模型预测：
+    # 运动模型预测： 3:
     sigma = predict_sigma_motion(sigma, u)
-    # 将采样点与权重相乘求对均值的估计：
+    # 将采样点与权重相乘求对均值的估计： 4:
     xPred = (wm @ sigma.T).T
-    # 求协方差的估计：
+    # 求协方差的估计： 5: 
     PPred = calc_sigma_covariance(xPred, sigma, wc, Q)
 
     #  Update 更新
-    zPred = observation_model(xPred)
-    # 求残差：
-    y = z - zPred
-    # 对上一步计算过的均值的估计再次生成sigma采样点：
+    # 对上一步计算过的均值的估计再次生成sigma采样点： 6:
     sigma = generate_sigma_points(xPred, PPred, gamma)
-    zb = (wm @ sigma.T).T
+    # 用生成的sigma采样点做观测预测： 7:
     z_sigma = predict_sigma_observation(sigma)
-    st = calc_sigma_covariance(zb, z_sigma, wc, R)
-    Pxz = calc_pxz(sigma, xPred, z_sigma, zb, wc)
+    # 求均值：  8:
+    zPred = (wm @ z_sigma.T).T
+    # 求卡尔曼增益计算中的S：   9:
+    st = calc_sigma_covariance(zPred, z_sigma, wc, R)
+    # 求xz间协方差：   10: 
+    Pxz = calc_pxz(sigma, xPred, z_sigma, zPred, wc)
+    # 计算卡尔曼增益：  11:
     K = Pxz @ np.linalg.inv(st)
+    y = z - zPred
+    # 更新均值：  12: 
     xEst = xPred + K @ y
+    # 更新协方差：  13: 
     PEst = PPred - K @ st @ K.T
 
     return xEst, PEst
