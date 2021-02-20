@@ -3,11 +3,11 @@
 
 自动化页面点击demo
 
-python2
+python3
 
 """
-# 注意：urllib2只在Python2中有：
-import urllib2
+# python3中只有urllib，且ProxyHandler和build_opener都在request中：
+import urllib.request
 import time
 import re
 import random
@@ -17,19 +17,21 @@ unusedurl = {}
 
 #生成ProxyHandler对象
 def get_proxy():
-    return urllib2.ProxyHandler({'http': "localhost:8580"})
+    return urllib.request.ProxyHandler({'http': "localhost:8580"})
 
 #生成指向代理的url_opener
 def get_proxy_http_opener(proxy):
-    return urllib2.build_opener(proxy)
+    return urllib.request.build_opener(proxy)
 
 #获取指定URL指向的网页，调用了前两个函数
 def get_file_content(url):
     opener = get_proxy_http_opener(get_proxy())
     content = opener.open(url).read()
+    # Note that Python3 does not read the html code as a string but as a bytearray, so you need to convert it to one with decode.
+    content_str = content.decode("utf8")
     opener.close()
     #为方便正则匹配，将其中的换行符消掉
-    return content.replace('\r', '').replace('\n', '')
+    return content_str.replace('\r', '').replace('\n', '')
 
 #根据网页HTML代码抽取网页标题：：没用到
 def extract_title(content):
@@ -39,7 +41,6 @@ def extract_title(content):
 #根据网页HTML代码抽取所有<a>标签中的URL
 def extract_url(content):
     urllist = []
-
     aelems = re.findall('<a href=".*?<\/a>', content)
     for aelem in aelems:
         splits = aelem.split(' ')
@@ -61,15 +62,16 @@ def get_localtime():
 
 #主函数
 def begin_access(starturl):
-    
+
     totalurl[starturl] = True
     unusedurl[starturl] = True
-    print 'seq\ttime\ttitle\turl'
+    print('seq\ttime\ttitle\turl')
     
     i = 0
     while i < 100 and unusedurl:
-        nexturl = unusedurl.keys()[0]
-        print nexturl
+        # python3中，keys不能返回一个list，所以不能单纯用序号访问，如需要第一个元素，可用以下这种方式：
+        nexturl = next(iter(unusedurl.keys()))
+        print(nexturl)
         del unusedurl[nexturl]
         content = get_file_content(nexturl)
 
@@ -83,11 +85,12 @@ def begin_access(starturl):
         # print urllist
         
         for url in urllist:
-            if not totalurl.has_key(url):
+            # Removed dict.has_key() – use the in operator instead.
+            if url not in totalurl:
                 totalurl[url] = True
                 unusedurl[url] = True
         
-        print '%d\t%s\t%s\t%s' %(i, get_localtime(), title, nexturl)
+        print('%d\t%s\t%s\t%s' %(i, get_localtime(), title, nexturl))
         
         i = i + 1
         time.sleep(random.uniform(1.1,4.3))
@@ -97,10 +100,10 @@ def begin_access(starturl):
 
 #调用主函数
 startpg = ['网址1','网址2']
-for i in range(150):
+for i in range(300):
     # 循环
-    print "循环::::::::     %d\t" %(i)
+    print("循环::::::::     %d\t" %(i))
     for bloglist in startpg:
-        print 'blogs in:  '+bloglist
+        print('blogs in:  '+bloglist)
         begin_access(bloglist)
-    time.sleep(random.uniform(11.4,19.5))
+    # time.sleep(random.uniform(11.4,64.5))
